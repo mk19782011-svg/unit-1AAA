@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الامتحان الأول - المعلم محمد تيسير الخرشة</title>
+    
+    <!-- مكتبات Firebase المتوافقة -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 30px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1, h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-teacher {
+            background-color: #7f8c8d;
+        }
+
+        .btn-teacher:hover {
+            background-color: #626567;
+        }
+
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+            font-weight: bold;
+            color: #7f8c8d;
+        }
+
+        .question-box {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .options-list {
+            list-style: none;
+            margin-bottom: 25px;
+        }
+
+        .option-item {
+            background: #fdfdfd;
+            border: 1px solid #e0e0e0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .option-item:hover {
+            background: #ebf5fb;
+            border-color: #3498db;
+        }
+
+        .option-item.selected {
+            background: #ebf5fb;
+            border-color: #3498db;
+            font-weight: bold;
+        }
+
+        .score-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #27ae60;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .review-item {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .review-item.correct {
+            border-right: 5px solid #27ae60;
+        }
+
+        .review-item.incorrect {
+            border-right: 5px solid #e74c3c;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px; left: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #aaa;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .results-table th, .results-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .results-table th {
+            background-color: #2c3e50;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- شاشة الدخول -->
+        <div id="welcome-screen" class="screen active">
+            <h1>الامتحان الأول</h1>
+            <h2>المعلم: محمد تيسير الخرشة</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 30px;">مادة اللغة الإنجليزية - الثانوية العامة</p>
+            
+            <div class="form-group">
+                <label for="student-name">أدخل اسمك الكامل:</label>
+                <input type="text" id="student-name" placeholder="الاسم الثلاثي...">
+            </div>
+            
+            <button class="btn" id="start-btn">بدء الامتحان</button>
+            <button class="btn btn-teacher" id="teacher-btn">لوحة المعلم</button>
+        </div>
+
+        <!-- شاشة الأسئلة -->
+        <div id="quiz-screen" class="screen">
+            <div class="quiz-header">
+                <span id="question-counter">السؤال 1 من 10</span>
+            </div>
+
+            <div class="question-box" id="question-title"></div>
+
+            <ul class="options-list" id="options-container"></ul>
+
+            <button class="btn" id="next-btn">السؤال التالي</button>
+        </div>
+
+        <!-- شاشة النتائج -->
+        <div id="result-screen" class="screen">
+            <div style="text-align: center;">
+                <h1>نتيجة الامتحان النهائي</h1>
+                <div class="score-display" id="final-score-text">0 / 100</div>
+                <p id="student-congrats"></p>
+            </div>
+
+            <h2 style="margin-top: 20px;">التغذية الراجعة وتصحيح الإجابات</h2>
+            <div id="review-container"></div>
+        </div>
+    </div>
+
+    <!-- نافذة لوحة المعلم -->
+    <div id="teacher-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="close-modal-btn">&times;</span>
+            <div id="teacher-login-box">
+                <h2>لوحة تحكم المعلم</h2>
+                <p style="margin-bottom: 10px;">أدخل كلمة المرور المشفرة للوصول:</p>
+                <div class="form-group">
+                    <input type="password" id="teacher-pass" placeholder="كلمة المرور...">
+                </div>
+                <button class="btn" id="verify-teacher-btn">دخول</button>
+            </div>
+            
+            <div id="teacher-dashboard" style="display: none;">
+                <h2>نتائج الطلاب المسجلة</h2>
+                <div id="results-table-container">
+                    <p>جاري تحميل النتائج...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // إعدادات Firebase الخاصة بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXBt1_W2l03fuqcea8U_HauBcfwvNrhhc",
+            authDomain: "nnnnnnnnnnnnnnnn-ca5f9.firebaseapp.com",
+            projectId: "nnnnnnnnnnnnnnnn-ca5f9",
+            storageBucket: "nnnnnnnnnnnnnnnn-ca5f9.firebasestorage.app",
+            messagingSenderId: "401864841705",
+            appId: "1:401864841705:web:5bce3286ebff6a15d35378",
+            measurementId: "G-YC8ZX67BJS"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const rawQuestions = [
+            {
+                q: "When someone asks you to <u>pass on</u> a message to a friend, it means you need to inform them about something.",
+                options: ["pass on", "make", "establish", "manage"],
+                answer: 0
+            },
+            {
+                q: "It’s essential to __________ contact with clients to ensure they feel valued and informed.",
+                options: ["carry", "deliver", "establish", "pass on"],
+                answer: 2
+            },
+            {
+                q: "Can you please <u>spell out</u> the instructions for me? I didn’t understand them.",
+                options: ["bring about", "pick up", "spell out", "come across"],
+                answer: 2
+            },
+            {
+                q: "I always try to strike up a __________ when I meet someone new.",
+                options: ["bond", "conversation", "compliment", "laugh"],
+                answer: 1
+            },
+            {
+                q: "I don’t usually like someone immediately but I really __________ him.",
+                options: ["strike up", "pick up", "real bond", "took to"],
+                answer: 3
+            },
+            {
+                q: "Then the boss asked me to say who I thought was to blame. It was so embarrassing! This sentence means that...",
+                options: ["the boss insisted on having the last word.", "the boss fired questions at me.", "the boss put me on the spot.", "the boss didn’t get a word in edgeways."],
+                answer: 2
+            },
+            {
+                q: "She talked so much that I didn't manage to say anything at all during lunch. This sentence means that...",
+                options: ["I jumped down his throat.", "I refused to let anything drop.", "I didn’t get a word in edgeways.", "I put him on the spot."],
+                answer: 2
+            },
+            {
+                q: "Kareem was thrilled when he found out he'd got a place at university. - The adjective that replaces the word 'thrilled' is...",
+                options: ["terrified", "ecstatic", "tense", "devastated"],
+                answer: 1
+            },
+            {
+                q: "Randa’s mother was absolutely …………… when she found out that her daughter had cheated in the exam again.",
+                options: ["ecstatic", "livid", "astonished", "thrilled"],
+                answer: 1
+            },
+            {
+                q: "I couldn’t process so much information. The word 'process' can be replaced with...",
+                options: ["take in", "figure out", "come across", "spell out"],
+                answer: 0
+            }
+        ];
+
+        let questions = [];
+        let currentIdx = 0;
+        let studentName = "";
+        let userAnswers = {};
+
+        function shuffle(arr) {
+            return arr.sort(() => Math.random() - 0.5);
+        }
+
+        function startQuiz() {
+            const input = document.getElementById("student-name");
+            const name = input.value.trim();
+            if (!name) {
+                alert("الرجاء إدخال الاسم الكامل أولاً!");
+                return;
+            }
+            studentName = name;
+
+            questions = JSON.parse(JSON.stringify(rawQuestions));
+            shuffle(questions);
+
+            questions.forEach(q => {
+                let optionsWithInfo = q.options.map((opt, i) => ({ text: opt, isCorrect: i === q.answer }));
+                shuffle(optionsWithInfo);
+                q.options = optionsWithInfo.map(o => o.text);
+                q.answer = optionsWithInfo.findIndex(o => o.isCorrect);
+            });
+
+            currentIdx = 0;
+            userAnswers = {};
+
+            document.getElementById("welcome-screen").classList.remove("active");
+            document.getElementById("quiz-screen").classList.add("active");
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentIdx >= questions.length) {
+                showResults();
+                return;
+            }
+
+            const q = questions[currentIdx];
+            document.getElementById("question-counter").innerText = `السؤال ${currentIdx + 1} من ${questions.length}`;
+            document.getElementById("question-title").innerHTML = `${currentIdx + 1}. ${q.q}`;
+
+            const container = document.getElementById("options-container");
+            container.innerHTML = "";
+
+            q.options.forEach((opt, idx) => {
+                const li = document.createElement("li");
+                li.className = "option-item";
+                if (userAnswers[currentIdx] === idx) {
+                    li.classList.add("selected");
+                }
+                li.innerText = opt;
+                li.onclick = () => {
+                    userAnswers[currentIdx] = idx;
+                    document.querySelectorAll(".option-item").forEach((el, i) => {
+                        if (i === idx) el.classList.add("selected");
+                        else el.classList.remove("selected");
+                    });
+                };
+                container.appendChild(li);
+            });
+        }
+
+        function nextQuestion() {
+            if (userAnswers[currentIdx] === undefined) {
+                alert("يرجى اختيار إجابة للمتابعة!");
+                return;
+            }
+            currentIdx++;
+            loadQuestion();
+        }
+
+        function showResults() {
+            let correct = 0;
+            questions.forEach((q, i) => {
+                if (userAnswers[i] === q.answer) correct++;
+            });
+            const score = Math.round((correct / questions.length) * 100);
+
+            document.getElementById("quiz-screen").classList.remove("active");
+            document.getElementById("result-screen").classList.add("active");
+
+            document.getElementById("final-score-text").innerText = `${score} / 100`;
+            document.getElementById("student-congrats").innerText = `أحسنت يا ${studentName}! أتممت الامتحان بنجاح.`;
+
+            const review = document.getElementById("review-container");
+            review.innerHTML = "";
+            questions.forEach((q, i) => {
+                const userChoice = userAnswers[i];
+                const isCorrect = userChoice === q.answer;
+                const div = document.createElement("div");
+                div.className = `review-item ${isCorrect ? 'correct' : 'incorrect'}`;
+                div.innerHTML = `
+                    <p><strong>السؤال ${i + 1}:</strong> ${q.q}</p>
+                    <p>إجابتك: <span style="color: ${isCorrect ? 'green' : 'red'};">${q.options[userChoice]}</span></p>
+                    ${!isCorrect ? `<p>الإجابة الصحيحة: <span style="color: green;">${q.options[q.answer]}</span></p>` : ''}
+                `;
+                review.appendChild(div);
+            });
+
+            saveResultToFirebase(studentName, score);
+        }
+
+        function saveResultToFirebase(name, finalScore) {
+            try {
+                db.ref('exam_results').push({
+                    studentName: name,
+                    score: finalScore,
+                    date: new Date().toLocaleString()
+                });
+            } catch (e) {
+                console.log("Database save error: ", e);
+            }
+        }
+
+        function loadTeacherResults() {
+            const container = document.getElementById("results-table-container");
+            container.innerHTML = "<p>جاري جلب النتائج...</p>";
+            
+            db.ref('exam_results').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) {
+                    container.innerHTML = "<p>لا توجد نتائج مسجلة حتى الآن.</p>";
+                    return;
+                }
+
+                let html = `
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>اسم الطالب</th>
+                                <th>الدرجة</th>
+                                <th>وقت الإرسال</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                Object.values(data).forEach(item => {
+                    html += `
+                        <tr>
+                            <td>${item.studentName}</td>
+                            <td><strong>${item.score} / 100</strong></td>
+                            <td>${item.date}</td>
+                        </tr>
+                    `;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            });
+        }
+
+        window.onload = function() {
+            document.getElementById("start-btn").onclick = startQuiz;
+            document.getElementById("next-btn").onclick = nextQuestion;
+            
+            document.getElementById("teacher-btn").onclick = function() {
+                document.getElementById("teacher-login-box").style.display = "block";
+                document.getElementById("teacher-dashboard").style.display = "none";
+                document.getElementById("teacher-pass").value = "";
+                document.getElementById("teacher-modal").style.display = "flex";
+            };
+            
+            document.getElementById("close-modal-btn").onclick = function() {
+                document.getElementById("teacher-modal").style.display = "none";
+            };
+            
+            document.getElementById("verify-teacher-btn").onclick = function() {
+                const pass = document.getElementById("teacher-pass").value;
+                if (pass === "MK1978mk") {
+                    document.getElementById("teacher-login-box").style.display = "none";
+                    document.getElementById("teacher-dashboard").style.display = "block";
+                    loadTeacherResults();
+                } else {
+                    alert("كلمة المرور غير صحيحة!");
+                }
+            };
+        };
+    </script>
+</body>
+</html>
